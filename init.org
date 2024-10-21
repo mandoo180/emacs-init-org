@@ -1,0 +1,1400 @@
+#+title: Emacs Configurations
+#+author: Kyeongsoo Choi
+#+date: 2024-09-07
+#+startup: fold
+#+property: header-args :emacs-lisp :tangle ~/.config/emacs/init.el :mkdirp yes :results none
+
+
+* Environment
+
+[[https://wiki.archlinux.org/title/XDG_Base_Directory][XDG Base Directory]]
+
+#+begin_src emacs-lisp
+  ;; Some paths
+  (setenv "DZ_WEB" (concat (getenv "HOME") "/Projects/Code/Douzone/dews-web"))
+  (setenv "DZ_FRONT" (concat (getenv "HOME") "/Projects/Code/Douzone/gerp-front-bootstrap"))
+  (setenv "DZ_SERVICE" (concat (getenv "HOME") "/Projects/Code/Douzone/services"))
+  (setenv "XDG_CONFIG_HOME" (concat (getenv "HOME") "/.config"))
+  (setenv "PAGER" "cat")
+
+  (setq ks/default-font-size 110)
+  (setq ks/default-variable-font-size 110)
+
+  ;; macOS
+  (if (string-equal "darwin" system-type)
+      (progn (setq insert-directory-program "gls" dired-use-ls-dired t)
+             (setq dired-listing-switches "-al --group-diretories-first")
+             (setq ks/default-font-size 140)
+             (setq ks/default-variable-font-size 140)))
+#+end_src
+
+* Tips
+
+[[https://github.com/daviwil/emacs-from-scratch/blob/master/Emacs.org?plain=1][Emacs from scratch]]
+[[https://orgmode.org/manual/index.html][OrgMode manual]]
+[[https://www.gnu.org/software/emacs/manual/html_node/elisp/index.html#SEC_Contents][Emacs Lisp]]
+
+=C-c C-o=  =(M-x org-open-at-point)= to follow link. 
+=C-c C-n= next topic.
+=C-c C-p= previous topic.
+
+=C-c C-v C-t= to tangle this org file to init.el (see property)
+=C-c C-v C-f= to tangle this org file to specified file.
+
+=C-c C-c= to eval source block.
+
+=M-down= to move topic down
+=M-up= to move topic up
+
+* Meta
+
+#+begin_src emacs-lisp
+;; -*- lexical-binding: t -*-
+#+end_src
+
+* Startup Performance
+
+#+begin_src emacs-lisp
+  (setq gc-cons-threshold (* 50 1000 1000))
+
+  (defun ks/display-startup-time ()
+    (message "Emacs loaded in %s with %d garbage collections."
+             (format "%.2f seconds"
+                     (float-time
+                      (time-subtract after-init-time before-init-time)))
+             gcs-done))
+
+  (add-hook 'emacs-startup-hook #'ks/display-startup-time)
+#+end_src
+
+* Package System Setup
+
+#+begin_src emacs-lisp
+  (require 'package)
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                           ("org" . "https://orgmode.org/elpa/")
+                           ("elpa" . "https://elpa.gnu.org/packages/")))
+  (setq package-enable-at-startup nil)
+  (setq package-native-complie t)
+
+  (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+
+  (use-package diminish
+    :ensure t)
+  (require 'diminish)
+
+  (setq custom-file (locate-user-emacs-file "custom.el"))
+  (load custom-file t)                    ; if file doesn't exist make one
+#+end_src
+
+* No Littering
+
+[[https://github.com/emacscollective/no-littering/blob/master/no-littering.el][Github Link]]
+
+#+begin_src emacs-lisp
+  (use-package no-littering)
+  (setq auto-save-file-name-transforms
+        `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+#+end_src
+
+* Basic UI Configuration
+
+#+begin_src emacs-lisp
+  (scroll-bar-mode -1)
+  (tool-bar-mode -1)
+  (tooltip-mode -1)
+  (set-fringe-mode 10)
+  (menu-bar-mode -1)
+  (column-number-mode)
+
+  ;; frame transparency
+  (setq ks/frame-transparency '(100 . 100))
+  (set-frame-parameter (selected-frame) 'alpha ks/frame-transparency)
+  (add-to-list 'default-frame-alist `(alpha . ,ks/frame-transparency))
+  (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+  ;; fonts
+  (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+  (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+  (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold)
+
+  (setq-default locale-coding-system 'utf-8-unix
+                buffer-file-encoding-system 'utf-8-unix
+                coding-system-for-read 'utf-8-unix
+                coding-system-for-write 'utf-8-unix
+                default-terminal-coding-system 'utf-8-unix
+                default-process-coding-system nil
+                default-file-name-coding-system 'utf-8-unix
+                default-keyboard-coding-system 'utf-8-unix
+                default-sendmail-coding-system 'utf-8-unix
+                inhibit-startup-message t
+                visible-bell nil
+                use-file-dialog nil
+                use-dialog-box nil
+                display-line-numbers-width 7
+                version-control t
+                delete-old-versions t
+                kept-old-versions 5
+                kept-new-versions 5
+                tab-width 2
+                truncate-lines t
+                line-move-visual t
+                sentence-end-double-space nil
+                bookmark-set-fringe-mark nil
+                scroll-step 1
+                scroll-margin 8
+                scroll-conservatively 101
+                delete-by-moving-to-trash t
+                trash-directory (concat (getenv "HOME") "/.Trash")
+                blink-cursor-interval 0.4
+                bookmark-default-file (locate-user-emacs-file ".bookmarks.el")
+                buffers-menu-max-size 30
+                case-fold-search t
+                column-number-mode t
+                indicate-buffer-boundaries 'left
+                display-fill-column-indicator-character ?┊
+                ediff-split-window-function 'split-window-horizontally
+                ediff-window-setup-function 'ediff-setup-windows-plain
+                indent-tabs-mode nil
+                create-lockfiles nil
+                auto-save-default nil
+                make-backup-files nil
+                backup-directory-alist (list (cons "." (concat user-emacs-directory "backup/")))
+                backup-by-copying nil
+                mouse-yank-at-point t
+                save-interprogram-paste-before-kill t
+                scroll-preserve-screen-position 'always
+                set-mark-command-repeat-pop t
+                tooltip-delay 0.5
+                truncate-lines t
+                truncate-partial-width-windows nil)
+
+  (setq global-auto-revert-non-file-buffers t
+        auto-revert-verbose nil)
+
+  (dolist (mode '(text-mode-hook
+                  prog-mode-hook
+                  conf-mode-hook))
+    (add-hook mode (lambda ()
+                     (display-line-numbers-mode t)
+                     (display-fill-column-indicator-mode t))))
+#+end_src
+
+* Editing
+
+#+begin_src emacs-lisp
+  (add-hook 'after-init-hook 'electric-pair-mode)
+  (add-hook 'after-init-hook 'electric-indent-mode)
+  (add-hook 'after-init-hook 'global-auto-revert-mode)
+  (add-hook 'after-init-hook 'delete-selection-mode)
+  (add-hook 'after-init-hook 'transient-mark-mode)
+  (add-hook 'after-init-hook 'subword-mode)
+
+  (use-package move-dup
+    :ensure t
+    :config
+    (global-set-key (kbd "s-<down>") 'move-dup-move-lines-down)
+    (global-set-key (kbd "s-<up>") 'move-dup-move-lines-up)
+    (global-set-key (kbd "s-d") 'duplicate-line)
+    (global-set-key (kbd "C-c d") 'move-dup-duplicate-down)
+    (global-set-key (kbd "C-c u") 'move-dup-duplicate-up))
+
+  (use-package repeat
+    :ensure t
+    :diminish
+    :config
+    (repeat-mode t))
+
+  (use-package multiple-cursors
+    :ensure t
+    :config
+    (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+    (global-set-key (kbd "C->") 'mc/mark-next-like-this)
+    (global-set-key (kbd "C-+") 'mc/mark-next-like-this)
+    (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+    (global-set-key (kbd "C-M-<mouse-1>") 'mc/add-cursor-on-click))
+
+  (use-package hungry-delete
+    :ensure t
+    :diminish
+    :config
+    (global-hungry-delete-mode t))
+
+  (use-package expand-region
+    :ensure t
+    :bind
+    ("M-h" . er/expand-region)
+    ("M-H" . er/contract-region))
+
+  (defun kill-back-to-indentation ()
+    "Kill from point back to the first non-whitespace character on the line."
+    (interactive)
+    (let ((prev-pos (point)))
+      (back-to-indentation)
+      (kill-region (point) prev-pos)))
+
+  (global-set-key (kbd "C-M-<backspace>") 'kill-back-to-indentation)
+
+  (defun kill-curr-buffer ()
+    (interactive)
+    (kill-buffer (current-buffer)))
+  (global-set-key (kbd "C-x k") 'kill-curr-buffer)
+
+  (defun kill-all-buffers ()
+    (interactive)
+    (mapc 'kill-buffer (buffer-list)))
+  (global-set-key (kbd "C-x a k") 'kill-all-buffers)
+
+  (defun next-open-line ()
+    (interactive)
+    (move-end-of-line 1)
+    (newline-and-indent))
+  (global-set-key (kbd "S-<return>") 'next-open-line)
+
+  (global-unset-key (kbd "S-<SPC>"))
+  (setq default-input-method "korean-hangul")
+  ;; (global-set-key (kbd "S-<SPC>") 'toggle-input-method)
+  ;; use C-\ instead
+
+  ;; Don't disable narrowing commands
+  (put 'narrow-to-region 'disabled nil)
+  (put 'narrow-to-page 'disabled nil)
+  (put 'narrow-to-defun 'disabled nil)
+  ;; Don't disable case-change functions
+  (put 'upcase-region 'disabled nil)
+  (put 'downcase-region 'disabled nil)
+#+end_src
+
+* UI Configuration
+
+[[https://github.com/lewang/command-log-mode][Github Link for command-log-mode]]
+
+#+begin_src emacs-lisp
+  (use-package kuronami-theme
+    :ensure t
+    :config
+    (load-theme 'kuronami))
+
+  (use-package command-log-mode
+    :commands command-log-mode)
+
+  (use-package keycast
+    :ensure t
+    :config
+    (keycast-tab-bar-mode 1))
+
+  ;; text scailing
+  (use-package hydra
+    :defer t)
+
+  (defhydra hydra-text-scale (:timeout 4)
+    "scale text"
+    ("j" text-scale-increase "in")
+    ("k" text-scale-decrease "out")
+    ("f" nil "finished" :exit t))
+
+  ;; (ks/leader-keys
+  ;;  "ts" '(hydra-text-scale/body :which-key "scale text"))
+
+  (use-package rainbow-mode
+    :config
+    (rainbow-mode t))
+
+  (use-package rainbow-delimiters
+    :hook
+    (prog-mode . rainbow-delimiters-mode))
+
+  (use-package page-break-lines
+    :ensure t
+    :diminish
+    :config
+    (add-to-list 'page-break-lines-modes 'browse-kill-ring-mode)
+    (global-page-break-lines-mode t))
+
+  (use-package all-the-icons
+    :ensure t)
+
+  (use-package nerd-icons
+    :ensure nil) ;; M-x nerd-icons-install-fonts
+
+  (use-package beacon
+    :config
+    (beacon-mode 1))
+#+end_src
+
+* Which key
+
+[[https://github.com/justbur/emacs-which-key][Github link for which-key]]
+
+#+begin_src emacs-lisp
+  (use-package which-key
+    :defer 0
+    :diminish which-key-mode
+    :config
+    (which-key-mode)
+    (setq which-key-idle-delay 1))
+#+end_src
+
+* Completion
+
+TODO: add corfu for lsp, abbrev and maybe yasnippet?
+
+#+begin_src emacs-lisp
+  (use-package vertico
+    :ensure t
+    :init
+    (vertico-mode))
+
+  (use-package savehist
+    :init
+    (savehist-mode))
+
+  (use-package orderless
+    :ensure t
+    :custom
+    (completion-styles '(orderless basic))
+    (completion-category-defaults nil)
+    (completion-category-overrides '((file (styles partial-completion)))))
+
+  (use-package marginalia
+    :ensure t
+    :diminish
+    :config
+    (marginalia-mode t))
+
+  (use-package consult
+    :ensure t
+    :bind
+    ;; C-x bindings
+    ("C-x C-r" . consult-recent-file)
+    ("C-x b" . consult-buffer)
+    ("C-x 4 b" . consult-buffer-other-window)
+    ("C-x 5 b" . consult-buffer-other-frame)
+    ("C-x t b" . consult-buffer-other-tab)
+    ("C-x r b" . consult-bookmark)
+    ("C-x p b" . consult-project-buffer)
+    ;; Custom M-# bindings for fast register access
+    ("M-#" . consult-register-load)
+    ("M-'" . consult-register-store)          ;; orig. abbrev-prefix-mark (unrelated)
+    ("C-M-#" . consult-register)
+    ("M-y" . consult-yank-pop)
+    ;; M-g bindings
+    ("M-g e" . consult-complie-error)
+    ("M-g f" . consult-fly-make)
+    ("M-g g" . consult-goto-line)
+    ("M-g M-g" . consult-goto-line)
+    ("M-g o" . consult-outline)
+    ("M-g m" . consult-mark)
+    ("M-g k" . consult-global-mark)
+    ("M-g i" . consult-imenu)
+    ("M-g I" . consult-imenu-multi)
+    ;; M-s bindings in `search-map'
+    ("M-s d" . consult-find)                  ;; Alternative: consult-fd
+    ("M-s c" . consult-locate)
+    ("M-s g" . consult-grep)
+    ("M-s G" . consult-git-grep)
+    ("M-s r" . consult-ripgrep)
+    ("M-s l" . consult-line)
+    ("M-s L" . consult-line-multi)
+    ("M-s k" . consult-keep-lines)
+    ("M-s u" . consult-focus-lines))
+
+  (global-set-key (kbd "C-x C-b") 'ibuffer)
+#+end_src
+
+* Org Mode
+
+[[https://gitahub.com/joostkremers/visual-fill-column][Github link for visual-fill-column]]
+[[https://orgmode.org/worg/org-contrib/babel/languages.html][Github link for org-babel]]
+[[https://orgmode.org/manual/Structure-Templates.html][Org modes structure templates]]
+
+#+begin_src emacs-lisp
+  ;; fixed-pitch doesn't work -> changed to regular
+  ;; and didn't work as well so just commented out
+  ;; (set-face-attribute 'org-block nil :foreground nil :inherit 'regular)
+  ;; (set-face-attribute 'org-table nil :inherit 'regular)
+  ;; (set-face-attribute 'org-formula nil :inherit 'regular)
+  ;; (set-face-attribute 'org-code nil :inherit '(shadow regular))
+  ;; (set-face-attribute 'org-verbatim nil :inherit '(shadow regular))
+  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face regular))
+  ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face regular))
+  ;; (set-face-attribute 'org-checkbox nil :inherit 'regular)
+  ;; (set-face-attribute 'line-number nil :inherit 'regular)
+  ;; (set-face-attribute 'line-number-current-line nil :inherit 'bold)
+
+  (defun ks/org-mode-setup ()
+    (org-indent-mode)
+    (display-line-numbers-mode 0)
+    ;; (variable-pitch-mode 1)
+    (setq-local electric-pair-inhibit-predicate `(lambda (c)
+                                                   (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))
+    (visual-line-mode 1))
+
+  (use-package org
+    :pin org
+    :commands (org-capture org-agenda)
+    :hook (org-mode . ks/org-mode-setup)
+    :config
+    (setq org-ellipsis "..."
+          org-agenda-start-with-log-mode t
+          org-log-done 'time
+          org-log-into-drawer t
+          org-edit-timestamp-down-means-later t
+          org-hide-emphasis-markers t
+          org-catch-invisible-edits 'show
+          org-export-coding-system 'utf-8
+          org-fast-tag-selection-single-key 'expert
+          org-html-validation-link nil
+          org-export-kill-product-buffer-when-displayed t
+          org-tags-column 80))
+
+  ;; bullets
+  ;; (use-package org-bullets
+  ;;   :hook (org-mode . org-bullets-mode)
+  ;;   :custom
+  ;;   (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
+  ;; visual fill column
+  (defun ks/org-mode-visual-fill ()
+    (setq visual-fill-column-width 100
+          visual-fill-column-center-text t)
+    (visual-fill-column-mode 1))
+
+  (use-package visual-fill-column
+    :hook
+    (org-mode . ks/org-mode-visual-fill))
+
+  ;; structure templates
+  ;; Lots of stuff from http://doc.norang.ca/org-mode.html
+  (with-eval-after-load 'org
+    (require 'org-tempo)
+    ;; (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+    ;; (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+    ;; (add-to-list 'org-structure-template-alist '("py" . "src python"))
+    ;; (add-to-list 'org-structure-template-alist '("js" . "src javascript"))
+    ;; (add-to-list 'org-structure-template-alist '("ts" . "src typescript"))
+    ;; (add-to-list 'org-structure-template-alist '("java" . "src java"))
+    ;; (add-to-list 'org-structure-template-alist '("c" . "src c"))
+    ;; (add-to-list 'org-structure-template-alist '("sql" . "src sql"))
+
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     (seq-filter
+      (lambda (pair)
+        (locate-library (concat "ob-" (symbol-name (car pair)))))
+      '((R . t)
+        (dot . t)
+        (gnuplot . t)
+        (latex . t)
+        (python . t)
+        (javascript . t)
+        (typescript . t)
+        (shell . t)
+        (sql . t)
+        (sqlite . t)))))
+#+end_src
+
+* Tangle Configuration Files
+
+#+begin_src emacs-lisp
+  (defun ks/org-babel-tangle-config ()
+    (when (string-equal (file-name-directory (buffer-file-name))
+                        (expand-file-name user-emacs-directory))
+      ;; dynamic scoping to the rescue
+      (let ((org-confirm-babel-evaluate nil))
+        (org-babel-tangle))))
+
+  (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'ks/org-babel-tangle-config)))
+#+end_src
+
+* Eglot
+
+#+begin_src emacs-lisp
+  ;; M-. goto definition
+  ;; M-, goto implementation
+  ;; M-? xref-find-references
+  (use-package eglot
+    :ensure t
+    :defer t
+    :hook
+    (python-mode . eglot-ensure)
+    (javascript-mode . eglot-ensure)
+    (typescript-ts-mode . eglot-ensure))
+#+end_src
+
+* Tree Sitter
+
+#+begin_src emacs-lisp
+  (use-package tree-sitter
+    :ensure t
+    :diminish 'tree-sitter)
+
+  (use-package tree-sitter-langs
+    :ensure t)
+
+  (global-tree-sitter-mode t)
+#+end_src
+
+* Projectile Configuration
+
+#+begin_src emacs-lisp
+  (use-package projectile
+    :diminish projectile-mode
+    :config (projectile-mode)
+    :custom ((projectile-completion-system 'vertico))
+    :bind-keymap
+    ("C-c p" . projectile-command-map)
+    :init
+    ;; Note: set this to the my git repos
+    (when (file-directory-p "~/Projects")
+      (setq projectile-project-search-path '("~/Projects")))
+    (setq projectile-switch-project-action #'projectile-dired))
+
+  (use-package treemacs
+    :ensure t)
+
+  (use-package treemacs-projectile
+    :ensure t)
+
+  ;; daviwil uses counsel-projectile
+  ;; I'd rather try not to use counsel
+  ;; TODO: Find alternative!!
+#+end_src
+
+* Magit
+
+[[https://magit.vc/][Magit]] is useful let's try this.
+
+#+begin_src emacs-lisp
+  (use-package magit
+    :commands magit-status
+    :custom
+    (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+  ;; NOTE: Make sure to configure a GitHub token before using this package!
+  ;; - https://magit.vc/manual/forge/Token-Creation.html#Token-Creation
+  ;; - https://magit.vc/manual/ghub/Getting-Started.html#Getting-Started
+  ;; (use-package forge
+  ;;   :after magit)
+
+  ;; (setq-default magit-diff-refine-hunk 'all)
+  ;; Hint: customize `magit-repository-directories' so that you can use C-u M-F12 to
+  ;; quickly open magit on any one of your projects.
+  ;; (global-set-key [(meta f12)] 'magit-status)
+  ;; (global-set-key (kbd "C-x g") 'magit-status)
+  ;; (global-set-key (kbd "C-x M-g") 'magit-dispatch)
+  ;; (define-key magit-status-mode-map (kbd "C-M-<up>") 'magit-section-up)
+#+end_src
+
+* Terminals
+
+Don't use any terminal on Windows. That sucks.
+
+#+begin_src emacs-lisp
+  (use-package vterm
+    :commands vterm
+    :config
+    (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")  ;; Set this to match your custom shell prompt
+    (setq vterm-shell "zsh")
+    (setq vterm-max-scrollback 10000))
+#+end_src
+
+* Eshell
+
+Can I trust you...?
+
+[[https://www.gnu.org/software/emacs/manual/html_mono/eshell.html#Contributors-to-Eshell][Eshell]] is Emacs' own shell implementation written in Emacs Lisp.  It provides you with a cross-platform implementation (even on Windows!) of the common GNU utilities you would find on Linux and macOS (=ls=, =rm=, =mv=, =grep=, etc).  It also allows you to call Emacs Lisp functions directly from the shell and you can even set up aliases (like aliasing =vim= to =find-file=).  Eshell is also an Emacs Lisp REPL which allows you to evaluate full expressions at the shell.
+
+The downsides to Eshell are that it can be harder to configure than other packages due to the particularity of where you need to set some options for them to go into effect, the lack of shell completions (by default) for some useful things like Git commands, and that REPL programs sometimes don't work as well.  However, many of these limitations can be dealt with by good configuration and installing external packages, so don't let that discourage you from trying it!
+
+*Useful key bindings:*
+
+- =C-c C-p= / =C-c C-n= - go back and forward in the buffer's prompts (also =[[= and =]]= with evil-mode)
+- =M-p= / =M-n= - go back and forward in the input history
+- =C-c C-u= - delete the current input string backwards up to the cursor
+- =counsel-esh-history= - A searchable history of commands typed into Eshell
+
+We will be covering Eshell more in future videos highlighting other things you can do with it.
+
+For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
+- https://ambrevar.xyz/emacs-eshell/index.html
+- https://ambrevar.xyz/emacs-eshell-versus-shell/index.html
+
+#+begin_src emacs-lisp
+  (defun curr-dir-git-branch-string (pwd)
+    "Returns current git branch as a string, or the empty string if
+  PWD is not in a git repo (or the git command is not found)."
+    (interactive)
+    (when (and (not (file-remote-p pwd))
+               (eshell-search-path "git")
+               (locate-dominating-file pwd ".git"))
+      (let* ((git-url (shell-command-to-string "git config --get remote.origin.url"))
+             (git-repo (file-name-base (s-trim git-url)))
+             (git-output (shell-command-to-string (concat "git rev-parse --abbrev-ref HEAD")))
+             (git-branch (s-trim git-output))
+             (git-icon  "\xe0a0")
+             (git-icon2 (propertize "\xf020" 'face `(:family "octicons"))))
+        (concat git-repo " " git-icon2 " " git-branch))))
+
+  (defun pwd-replace-home (pwd)
+    "Replace home in PWD with tilde (~) character."
+    (interactive)
+    (let* ((home (expand-file-name (getenv "HOME")))
+           (home-len (length home)))
+      (if (and
+           (>= (length pwd) home-len)
+           (equal home (substring pwd 0 home-len)))
+          (concat "~" (substring pwd home-len))
+        pwd)))
+
+
+  (defun pwd-shorten-dirs (pwd)
+    "Shorten all directory names in PWD except the last two."
+    (let ((p-lst (split-string pwd "/")))
+      (if (> (length p-lst) 2)
+          (concat
+           (mapconcat (lambda (elm) (if (zerop (length elm)) ""
+                                      (substring elm 0 1)))
+                      (butlast p-lst 2)
+                      "/")
+           "/"
+           (mapconcat (lambda (elm) elm)
+                      (last p-lst 2)
+                      "/"))
+        pwd)))  ;; Otherwise, we just return the PWD
+
+  (defun python-prompt ()
+    "Returns a string (may be empty) based on the current Python
+     Virtual Environment. Assuming the M-x command: `pyenv-mode-set'
+     has been called."
+    (when (fboundp #'pyenv-mode-version)
+      (let ((venv (pyenv-mode-version)))
+        (when venv
+          (concat
+           (propertize "\xe928" 'face `(:family "alltheicons"))
+           (pyenv-mode-version))))))
+
+  (defun split-directory-prompt (directory)
+    (if (string-match-p ".*/.*" directory)
+        (list (file-name-directory directory) (file-name-base directory))
+      (list "" directory)))
+
+  (defun eshell/eshell-local-prompt-function ()
+    "A prompt for eshell that works locally (in that is assumes
+  that it could run certain commands) in order to make a prettier,
+  more-helpful local prompt."
+    (interactive)
+    (let* ((pwd        (eshell/pwd))
+           (directory (split-directory-prompt
+                       (pwd-shorten-dirs
+                        (pwd-replace-home pwd))))
+           (parent (car directory))
+           (name   (cadr directory))
+           (branch (curr-dir-git-branch-string pwd))
+           (python (when (not (file-remote-p pwd)) (python-prompt)))
+
+           (dark-env (eq 'dark (frame-parameter nil 'background-mode)))
+           (for-bars                 `(:weight bold))
+           (for-parent  (if dark-env `(:foreground "dark orange") `(:foreground "blue")))
+           (for-dir     (if dark-env `(:foreground "orange" :weight bold)
+                          `(:foreground "blue" :weight bold)))
+           (for-git                  `(:foreground "green"))
+           (for-python               `(:foreground "#5555FF")))
+
+      (concat
+       (propertize " "    'face for-bars)
+       (propertize parent   'face for-parent)
+       (propertize name     'face for-dir)
+       (when branch
+         (concat (propertize " ── "    'face for-bars)
+                 (propertize branch   'face for-git)))
+       (when python
+         (concat (propertize " ── " 'face for-bars)
+                 (propertize python 'face for-python)))
+       (propertize "\n"     'face for-bars)
+       (propertize (if (= (user-uid) 0) " #" " $") 'face `(:weight ultra-bold))
+       ;; (propertize " └→" 'face (if (= (user-uid) 0) `(:weight ultra-bold :foreground "red") `(:weight ultra-bold)))
+       (propertize " "    'face `(:weight bold)))))
+
+  (defun ks/configure-eshell ()
+    ;; Save command history when commands are entered
+    (add-hook 'eshell-pre-command-hook 'eshell-save-some-history)
+
+    ;; Truncate buffer for performance
+    (add-to-list 'eshell-output-filter-functions 'eshell-truncate-buffer)
+
+    ;; Bind some useful keys for evil-mode
+    ;; (evil-define-key '(normal insert visual) eshell-mode-map (kbd "C-r") 'counsel-esh-history)
+    ;; (evil-define-key '(normal insert visual) eshell-mode-map (kbd "<home>") 'eshell-bol)
+    ;; (evil-normalize-keymaps)
+
+    ;; Prompt settings
+    (setq-default eshell-prompt-function #'eshell/eshell-local-prompt-function)
+
+    (setq eshell-history-size         10000
+          eshell-buffer-maximum-lines 10000
+          eshell-hist-ignoredups t
+          eshell-scroll-to-bottom-on-input 'all
+          eshell-error-if-no-glob t
+          eshell-save-history-on-exit t
+          eshell-prefer-lisp-functions nil
+          eshell-destroy-buffer-when-process-dies t)
+
+    (add-hook 'eshell-mode-hook
+              (lambda ()
+                (add-to-list 'eshell-visual-commands "ssh")
+                (add-to-list 'eshell-visual-commands "tail")
+                (add-to-list 'eshell-visual-commands "top")
+                (add-to-list 'eshell-visual-commands "htop")
+                (add-to-list 'eshell-visual-commands "zsh")
+                (add-to-list 'eshell-visual-commands "vim")
+
+                (eshell/alias "ff" "find-file $1")
+                (eshell/alias "emacs" "find-file $1")
+                (eshell/alias "ffo" "find-file-other-window $1")
+                ;; The 'ls' executable requires the gnu version on mac
+                (let ((ls (if (file-exists-p "/usr/local/bin/gls")
+                              "/usr/local/bin/gls"
+                            "/bin/ls")))
+                  (eshell/alias "ll" (concat ls " -AlohG --color=always"))))))
+
+  (use-package eshell-git-prompt
+    :after eshell)
+
+  (use-package eshell
+    :hook (eshell-first-time-mode . ks/configure-eshell))
+
+  (defun eshell/clear ()
+    "Clear the eshell buffer."
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (eshell-send-input)))
+
+  (defun eshell/gst (&rest args)
+    (magit-status (pop args) nil)
+    (eshell/echo)) ;; the echo command suppresses output
+
+  (defun eshell-new ()
+    "Open a new insctance of eshell."
+    (interactive)
+    (eshell 'N))
+
+  (defun eshell-here ()
+    "Opens up a new shell in the directory associated with the current
+  buffers's file. the eshell is renamed to match that directory to make
+  multiple eshell windows easier."
+    (interactive)
+    (let* ((height (/ (window-total-height) 3)))
+      (split-window-vertically (- height))
+      (other-window 1)
+      (eshell "new")
+      (insert (concat "ls"))
+      (eshell-send-input)))
+#+end_src
+* Dired
+
+*Navigation*
+
+*Emacs* / *Evil*
+- =n= / =j= - next line
+- =p= / =k= - previous line
+- =j= / =J= - jump to file in buffer
+- =RET= - select file or directory
+- =^= - go to parent directory
+- =S-RET= / =g O= - Open file in "other" window
+- =M-RET= - Show file in other window without focusing (previewing files)
+- =g o= (=dired-view-file=) - Open file but in a "preview" mode, close with =q=
+- =g= / =g r= Refresh the buffer with =revert-buffer= after changing configuration (and after filesystem changes!)
+
+
+*Marking*
+
+- =m= - Marks a file
+- =u= - Unmarks a file
+- =U= - Unmarks all files in buffer
+- =* t= / =t= - Inverts marked files in buffer
+- =% m= - Mark files in buffer using regular expression
+- =*= - Lots of other auto-marking functions
+- =k= / =K= - "Kill" marked items (refresh buffer with =g= / =g r= to get them back)
+- Many operations can be done on a single file if there are no active marks!
+
+
+*Copying and Renaming*
+
+- =C= - Copy marked files (or if no files are marked, the current file)
+- Copying single and multiple files
+- =U= - Unmark all files in buffer
+- =R= - Rename marked files, renaming multiple is a move!
+- =% R= - Rename based on regular expression: =^test= , =old-\&=
+
+*Power command*: =C-x C-q= (=dired-toggle-read-only=) - Makes all file names in the buffer editable directly to rename them!  Press =Z Z= to confirm renaming or =Z Q= to abort.
+
+
+*Creating and extracting archives*
+
+- =Z= - Compress or uncompress a file or folder to (=.tar.gz=)
+- =c= - Compress selection to a specific file
+- =dired-compress-files-alist= - Bind compression commands to file extension
+
+
+*Other common operations*
+
+- =T= - Touch (change timestamp)
+- =M= - Change file mode
+- =O= - Change file owner
+- =G= - Change file group
+- =S= - Create a symbolic link to this file
+- =L= - Load an Emacs Lisp file into Emacs
+
+
+*Configuration*
+
+He's really amazing.
+
+#+begin_src emacs-lisp
+  ;; (use-package dired-single
+  ;;   :commands (dired dired-jump))
+
+  (use-package dired-open
+    :commands (dired dired-jump)
+    :config
+    ;; Doesn't work as expected!
+    ;;(add-to-list 'dired-open-functions #'dired-open-xdg t)
+    (setq dired-open-extensions '(("png" . "feh")
+				  ("mkv" . "mpv"))))
+
+  ;; macos issue -> Listing directory failed but 'access-file' worked
+  ;; brew install coreutils
+  ;; then do below -> it worked!
+  ;; (setq insert-directory-program "gls" dired-use-ls-dired t)
+  ;; (setq dired-listing-switches "-al --group-diretories-first")
+
+  (setq-default dired-dwim-target t)
+  (setq dired-recursive-deletes 'top
+	dired-listing-switches "-agho --group-directories-first"
+	dired-omit-files "^\\.[^.].*"
+	dired-omit-verbose nil
+	dired-dwim-target 'dired-dwim-target-text
+	dired-hide-details-hide-symlink-targets nil
+	dired-kill-when-opening-new-dired-buffer t
+	delete-by-moving-to-trash t)
+
+  (use-package all-the-icons-dired
+    :ensure t
+    :config)
+
+  (add-hook 'dired-mode-hook (lambda()
+			       (dired-hide-details-mode t)
+			       (all-the-icons-dired-mode t)
+			       (dired-preview-mode t)))
+
+  (define-key dired-mode-map (kbd "b") 'dired-up-directory)
+  (define-key dired-mode-map (kbd "H") 'dired-hide-details-mode)
+#+end_src
+
+* Grep
+
+#+begin_src emacs-lisp
+  (setq-default grep-highlight-matches t
+                grep-scroll-output t)
+
+  (use-package wgrep
+    :ensure t
+    :config
+    (define-key grep-mode-map (kbd "C-c C-q") 'wgrep-change-to-wgrep-mode)
+    (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode))
+#+end_src
+
+* Recentf
+
+#+begin_src emacs-lisp
+  (use-package recentf
+    :ensure t
+    :config
+    (setq recentf-max-saved-items 200)
+    (setq recentf-filename-handlers
+      (append '(abbreviate-file-name) recentf-filename-handlers))
+    (define-key recentf-mode-map (kbd "C-x C-r") 'recentf)
+    (recentf-mode))
+#+end_src
+
+* Tab Bar
+
+#+begin_src emacs-lisp
+  (use-package tab-bar
+    :ensure nil
+    ;; tab-bar prefix = C-x t
+    :bind (("s-[" . tab-bar-switch-to-prev-tab)
+           ("s-]" . tab-bar-switch-to-next-tab)
+           ("s-{" . (lambda ()
+                      (interactive)
+                      (tab-move -1)))
+           ("s-}" . (lambda ()
+                      (interactive)
+                      (tab-move 1)))
+           ("s-<f4>" . tab-bar-close-tab))
+    :custom
+    (tab-bar-show t)
+    (tab-bar-close-button-show nil)
+    (tab-bar-auto-width nil)
+    (tab-bar-format '(tab-bar-format-menu-bar
+                      ;;dw/exwm-workspace-icon
+                      tab-bar-format-tabs-groups
+                      tab-bar-separator
+                      ;;dw/tmr-mode-line
+                      tab-bar-separator
+                      tab-bar-format-align-right
+                      tab-bar-format-global))
+    ;; Like winner-mode for tabs
+    (tab-bar-history-mode 1)
+    (tab-bar-mode 1))
+#+end_src
+
+* Window configuration
+
+#+begin_src emacs-lisp
+  ;; (use-package winner
+  ;;   :ensure t
+  ;;   :config
+  ;;   (winner-mode t))
+
+  ;; (defun split-window-func-with-other-buffer (split-function)
+  ;;   (lambda (&optional arg)
+  ;;     "Split this window and switch to the new window unless ARG is provided."
+  ;;     (interactive "P")
+  ;;     (funcall split-function)
+  ;;     (let ((target-window (next-window)))
+  ;;       (set-window-buffer target-window (other-buffer))
+  ;;       (unless arg
+  ;;         (select-window target-window)))))
+
+  ;; (global-set-key (kbd "C-x 2") (split-window-func-with-other-buffer 'split-window-vertically))
+  ;; (global-set-key (kbd "C-x 3") (split-window-func-with-other-buffer 'split-window-horizontally))
+
+  ;; (defun sanityinc/toggle-delete-other-windows ()
+  ;;   "Delete other windows in frame if any, or restore previous window config."
+  ;;   (interactive)
+  ;;   (if (and winner-mode
+  ;;            (equal (selected-window) (next-window)))
+  ;;       (winner-undo)
+  ;;     (delete-other-windows)))
+
+  ;; (global-set-key (kbd "C-x 1") 'sanityinc/toggle-delete-other-windows)
+
+  ;; (defun split-window-horizontally-instead ()
+  ;;   "Kill any other windows and re-split such that the current window is on the top half of the frame."
+  ;;   (interactive)
+  ;;   (let ((other-buffer (and (next-window) (window-buffer (next-window)))))
+  ;;     (delete-other-windows)
+  ;;     (split-window-horizontally)
+  ;;     (when other-buffer
+  ;;       (set-window-buffer (next-window) other-buffer))))
+
+  ;; (defun split-window-vertically-instead ()
+  ;;   "Kill any other windows and re-split such that the current window is on the left half of the frame."
+  ;;   (interactive)
+  ;;   (let ((other-buffer (and (next-window) (window-buffer (next-window)))))
+  ;;     (delete-other-windows)
+  ;;     (split-window-vertically)
+  ;;     (when other-buffer
+  ;;       (set-window-buffer (next-window) other-buffer))))
+
+  ;; (global-set-key (kbd "C-x |") 'split-window-horizontally-instead)
+  ;; (global-set-key (kbd "C-x _") 'split-window-vertically-instead)
+
+  ;; (defun sanityinc/split-window()
+  ;;   "Split the window to see the most recent buffer in the other window.
+  ;; Call a second time to restore the original window configuration."
+  ;;   (interactive)
+  ;;   (if (eq last-command 'sanityinc/split-window)
+  ;;       (progn
+  ;;         (jump-to-register :sanityinc/split-window)
+  ;;         (setq this-command 'sanityinc/unsplit-window))
+  ;;     (window-configuration-to-register :sanityinc/split-window)
+  ;;     (switch-to-buffer-other-window nil)))
+
+  ;; (global-set-key (kbd "<f7>") 'sanityinc/split-window)
+#+end_src
+
+* Edwina
+
+By default these keys are prefixed with C-c C-w. Customize edwina-keymap-prefix to change the prefix.
+
+| Binding     | Action                               |
+| =r=, =C-r=      | Arrange windows                      |
+| =n=, =C-n=, =SPC= | Move to next window                  |
+| =p=, =C-p=      | Move to previous window              |
+| =N=, =C-S-n=    | Swap places with the next window     |
+| =P=, =C-S-p=    | Swap places with the previous window |
+| =%=, ={=, =[=     | Decrease the size of the master area |
+| =^=, =}=, =]=     | Increase the size of the master area |
+| =d=, =C-d=      | Decrease number of windows in master |
+| =i=           | Increase number of windows in master |
+| =k=, =C-k=      | Delete window                        |
+| =RET=         | Cycle window to/from master area     |
+| =c=, =C-c=      | Clone current window                 |
+
+#+begin_src emacs-lisp
+  ;; (use-package edwina
+  ;;   :ensure t
+  ;;   :config
+  ;;   (setq display-buffer-base-action '(display-buffer-below-selected))
+  ;;   ;; (edwina-setup-dwm-keys)
+  ;;   (edwina-mode 1))
+#+end_src
+
+* Denote
+
+I am not really sure about the usage of this project. Let's just try this.
+
+#+begin_src emacs-lisp
+  (use-package denote
+    :ensure t
+    :config
+    ;; Remember to check the doc strings of those variables.
+    (setq denote-directory (expand-file-name "~/Notes/denote/"))
+    (setq denote-save-buffers nil)
+    (setq denote-known-keywords '("personal" "projects" "others"))
+    (setq denote-infer-keywords t)
+    (setq denote-sort-keywords t)
+    (setq denote-file-type nil) ; Org is the default, set others here
+    (setq denote-prompts '(title keywords))
+    (setq denote-excluded-directories-regexp nil)
+    (setq denote-excluded-keywords-regexp nil)
+    (setq denote-rename-confirmations '(rewrite-front-matter modify-file-name))
+
+    ;; Pick dates, where relevant, with Org's advanced interface:
+    (setq denote-date-prompt-use-org-read-date t)
+
+
+    ;; Read this manual for how to specify `denote-templates'.  We do not
+    ;; include an example here to avoid potential confusion.
+
+
+    (setq denote-date-format nil) ; read doc string
+
+    ;; By default, we do not show the context of links.  We just display
+    ;; file names.  This provides a more informative view.
+    (setq denote-backlinks-show-context t)
+
+    ;; Also see `denote-link-backlinks-display-buffer-action' which is a bit
+    ;; advanced.
+
+    ;; If you use Markdown or plain text files (Org renders links as buttons
+    ;; right away)
+    (add-hook 'text-mode-hook #'denote-fontify-links-mode-maybe)
+
+    ;; We use different ways to specify a path for demo purposes.
+    ;; (setq denote-dired-directories
+    ;;       (list denote-directory
+    ;;             (thread-last denote-directory (expand-file-name "attachments"))
+    ;;             (expand-file-name "~/Documents/books")))
+
+    ;; Generic (great if you rename files Denote-style in lots of places):
+    ;; (add-hook 'dired-mode-hook #'denote-dired-mode)
+    ;;
+    ;; OR if only want it in `denote-dired-directories':
+    (add-hook 'dired-mode-hook #'denote-dired-mode-in-directories)
+
+
+    ;; Automatically rename Denote buffers using the `denote-rename-buffer-format'.
+    (denote-rename-buffer-mode 1)
+
+    ;; Denote DOES NOT define any key bindings.  This is for the user to
+    ;; decide.  For example:
+    (let ((map global-map))
+      (define-key map (kbd "C-c n n") #'denote)
+      (define-key map (kbd "C-c n c") #'denote-region) ; "contents" mnemonic
+      (define-key map (kbd "C-c n N") #'denote-type)
+      (define-key map (kbd "C-c n d") #'denote-date)
+      (define-key map (kbd "C-c n z") #'denote-signature) ; "zettelkasten" mnemonic
+      (define-key map (kbd "C-c n s") #'denote-subdirectory)
+      (define-key map (kbd "C-c n t") #'denote-template)
+      ;; If you intend to use Denote with a variety of file types, it is
+      ;; easier to bind the link-related commands to the `global-map', as
+      ;; shown here.  Otherwise follow the same pattern for `org-mode-map',
+      ;; `markdown-mode-map', and/or `text-mode-map'.
+      (define-key map (kbd "C-c n i") #'denote-link) ; "insert" mnemonic
+      (define-key map (kbd "C-c n I") #'denote-add-links)
+      (define-key map (kbd "C-c n b") #'denote-backlinks)
+      (define-key map (kbd "C-c n f f") #'denote-find-link)
+      (define-key map (kbd "C-c n f b") #'denote-find-backlink)
+      ;; Note that `denote-rename-file' can work from any context, not just
+      ;; Dired bufffers.  That is why we bind it here to the `global-map'.
+      (define-key map (kbd "C-c n r") #'denote-rename-file)
+      (define-key map (kbd "C-c n R") #'denote-rename-file-using-front-matter))
+
+    ;; Key bindings specifically for Dired.
+    (let ((map dired-mode-map))
+      (define-key map (kbd "C-c C-d C-i") #'denote-link-dired-marked-notes)
+      (define-key map (kbd "C-c C-d C-r") #'denote-dired-rename-files)
+      (define-key map (kbd "C-c C-d C-k") #'denote-dired-rename-marked-files-with-keywords)
+      (define-key map (kbd "C-c C-d C-R") #'denote-dired-rename-marked-files-using-front-matter))
+
+    (with-eval-after-load 'org-capture
+      (setq denote-org-capture-specifiers "%l\n%i\n%?")
+      (add-to-list 'org-capture-templates
+                   '("n" "New note (with denote.el)" plain
+                     (file denote-last-path)
+                     #'denote-org-capture
+                     :no-save t
+                     :immediate-finish nil
+                     :kill-buffer t
+                     :jump-to-captured t)))
+
+    ;; Also check the commands `denote-link-after-creating',
+    ;; `denote-link-or-create'.  You may want to bind them to keys as well.
+
+
+    ;; If you want to have Denote commands available via a right click
+    ;; context menu, use the following and then enable
+    ;; `context-menu-mode'.
+    (add-hook 'context-menu-functions #'denote-context-menu))
+#+end_src
+
+* Nov.el
+
+#+begin_src emacs-lisp
+  (defun nov-font-setup ()
+    (face-remap-add-relative 'variable-pitch :family "Iosevka Nerd Font"
+                                             :height 1.0))
+
+  (use-package nov
+    :ensure t
+    :config
+    (setq nov-text-width t)
+    (setq visual-fill-column-center-text t)
+    (add-hook 'nov-mode-hook 'visual-line-mode)
+    (add-hook 'nov-mode-hook 'visual-fill-column-mode)
+    (add-hook 'nov-mode-hook 'nov-font-setup)
+    ;; (add-hook 'nov-post-html-render-hook 'my-nov-post-html-render-hook)
+    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+#+end_src
+
+* Mode Line
+
+#+begin_src emacs-lisp
+  (use-package doom-modeline
+    :init
+    (doom-modeline-mode 1))
+#+end_src
+
+* Emacs Lisp
+
+#+begin_src emacs-lisp
+  ;; elisp
+  (setq-default initial-scratch-message
+                (concat ";; Happy hacking, " user-login-name "!!\n\n"))
+
+  (use-package paren
+    :init
+    (set-face-background 'show-paren-match (face-background 'default))
+    (set-face-foreground 'show-paren-match "#afa")
+    (set-face-attribute  'show-paren-match nil :weight 'black)
+    (set-face-background 'show-paren-mismatch (face-background 'default))
+    (set-face-foreground 'show-paren-mismatch "#c66")
+    (set-face-attribute  'show-paren-mismatch nil :weight 'black))
+
+  (use-package paren-face
+    :ensure t
+    :init
+    (global-paren-face-mode))
+
+  (add-hook 'after-save-hook 'check-parens nil t)
+
+  (use-package ielm
+    :init
+    (add-hook 'ielm-mode-hook 'turn-on-eldoc-mode))
+
+  (use-package eros
+    :ensure t
+    :init
+    (add-hook 'emacs-lisp-mode-hook (lambda () (eros-mode 1))))
+
+  (defun ks/headerise-elisp ()
+    "Add minimal header and footer to an elisp buffer in order to placate flycheck."
+    (interactive)
+    (let ((fname (if (buffer-file-name)
+                     (file-name-nondirectory (buffer-file-name))
+                   (error "This buffer is not visiting a file"))))
+      (save-excursion
+        (goto-char (point-min))
+        (insert ";;; " fname " --- Insert description here -*- lexical-binding: t -*-\n"
+                ";;; Commentary:\n"
+                ";;; Code:\n\n")
+        (goto-char (point-max))
+        (insert ";;; " fname " ends here\n"))))
+
+  (defun ks/eval-last-sexp-or-region (prefix)
+    "Eval region from BEG to END if active, otherwise the last sexp."
+    (interactive "P")
+    (if (and (mark) (use-region-p))
+        (eval-region (min (point) (mark)) (max (point) (mark)))
+      (pp-eval-last-sexp prefix)))
+
+  (global-set-key [remap eval-expression] 'pp-eval-expression)
+
+  (defun ks/load-this-file ()
+    "Load the current file or buffer.
+  The current directory is temporarily added to `load-path'.  When
+  there is no current file, eval the current buffer."
+    (interactive)
+    (let ((load-path (cons default-directory load-path))
+          (file (buffer-file-name)))
+      (if file
+          (progn
+            (save-some-buffers nil (apply-partially 'derived-mode-p 'emacs-lisp-mode))
+            (load-file (buffer-file-name))
+            (message "Loaded %s" file))
+        (eval-buffer)
+        (message "Evaluated %s" (current-buffer)))))
+
+  ;; (with-eval-after-load 'lisp-mode
+  ;;   (define-key emacs-lisp-mode-map (kbd "C-c C-l") 'ks/load-this-file)
+  ;;   (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
+  ;;   (define-key emacs-lisp-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region))
+
+  (define-key emacs-lisp-mode-map (kbd "C-c C-l") 'ks/load-this-file)
+  (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
+  (define-key emacs-lisp-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region)
+  (define-key lisp-interaction-mode-map (kbd "C-c C-l") 'ks/load-this-file)
+  (define-key lisp-interaction-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
+  (define-key lisp-interaction-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region)
+#+end_src
+
+* Web Mode
+
+[[https://web-mode.org/][web-mode.el]]
+
+#+begin_src emacs-lisp
+  (use-package web-mode
+    :ensure t
+    :config
+    (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+    (setq web-mode-markup-indent-offset 2
+          web-mode-css-indent-offset 2
+          web-mode-code-indent-offset 2
+          web-mode-style-padding 2
+          web-mode-script-padding 2
+          web-mode-block-padding 2
+          web-mode-enable-auto-pairing t
+          web-mode-enable-auto-indentation t
+          web-mode-enable-css-colorization t
+          web-mode-enable-part-face t
+          web-mode-enable-comment-interpolation t
+          web-mode-enable-heredoc-fontification t
+          web-mode-enable-current-element-highlight t
+          web-mode-enable-current-column-highlight nil)
+    (setq web-mode-engines-alist
+          '(("php"    . "\\.phtml\\'")
+            ("blade"  . "\\.blade\\."))))
+
+  ;; npm install -g javacript-typescript-langserver
+  ;; npm install -g typescript-language-server
+
+  (use-package tagedit
+    :ensure t
+    :config
+    (tagedit-add-paredit-like-keybindings)
+    (define-key tagedit-mode-map (kbd "M-?") nil)
+    (define-key tagedit-mode-map (kbd "M-s") nil)
+    (add-hook 'sgml-mode-hook (lambda () (tagedit-mode 1))))
+
+  ;; for emmet for html
+  (use-package zencoding-mode
+    :ensure t
+    :config
+    (add-hook 'web-mode-hook 'zencoding-mode))
+#+end_src
+
+* CSS Mode
+#+begin_src emacs-lisp
+  (use-package css-mode
+    :ensure t
+    :config
+    (setq-default css-indent-offset 2))
+#+end_src
+* JS Mode
+#+begin_src emacs-lisp
+  (use-package js2-mode
+    :ensure t
+    :init
+    (setq js2-basic-indent 2
+          ;; js2-basic-offset 2
+          js2-auto-indent-p t
+          ;; js2-cleanup-whitespace t
+          js2-enter-indents-newline t
+          js2-indent-on-enter-key t
+          js2-global-externs (list "window" "module" "require" "buster" "sinon" "assert" "refute" "setTimeout" "clearTimeout" "setInterval" "clearInterval" "location" "__dirname" "console" "JSON" "jQuery" "$"))
+
+    (add-to-list 'auto-mode-alist '("\\.js$" . js-mode)))
+#+end_src
+
+* Undo Tree
+
+#+begin_src emacs-lisp
+  (use-package undo-tree
+    :ensure t
+    :diminish undo-tree-mode
+    :init
+    (global-undo-tree-mode 1)
+    :config
+    (setq undo-tree-history-directory-alist '(("." . "~/.config/emacs/undo-tree-history")))
+    :bind (("C-/" . undo-tree-undo)
+           ("C-?" . undo-tree-redo)
+           ("C-z" . undo-tree-undo)     ; Zap to character isn't helpful
+           ("C-S-z" . undo-tree-redo)))
+#+end_src
+
+* Searching
+
+#+begin_src emacs-lisp
+  (bind-keys :map isearch-mode-map
+             ("<left>"  . isearch-repeat-backward)
+             ("<right>" . isearch-repeat-forward)
+             ("<up>"    . isearch-ring-retreat)
+             ("<down>"  . isearch-ring-advance))
+
+  (use-package visual-regexp
+    :ensure t
+    :init
+    (use-package visual-regexp-steroids :ensure t)
+    :bind (("C-c r" . vr/replace)
+           ("C-c q" . vr/query-replace)))
+#+end_src
+
+* Flycheck
+
+[[https://github.com/flycheck/flycheck][Flycheck Github Link]]
+
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t
+    :init
+    (add-hook 'after-init-hook 'global-flycheck-mode)
+    :config
+    (setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc)))
+#+end_src
+
+* ElDoc
+
+#+begin_src emacs-lisp
+  (use-package eldoc
+    :diminish eldoc-mode
+    :init  (setq eldoc-idle-delay 0.1))
+#+end_sr
+c
