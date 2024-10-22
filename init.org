@@ -121,9 +121,10 @@
   (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
   ;; fonts
-  (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-  (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-  (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold)
+  (defun ks/set-font-faces ()
+    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold))
 
   (setq-default locale-coding-system 'utf-8-unix
                 buffer-file-encoding-system 'utf-8-unix
@@ -1022,34 +1023,6 @@ He's really amazing.
 
   ;; (global-set-key (kbd "<f7>") 'sanityinc/split-window)
 #+end_src
-
-* Edwina
-
-By default these keys are prefixed with C-c C-w. Customize edwina-keymap-prefix to change the prefix.
-
-| Binding     | Action                               |
-| =r=, =C-r=      | Arrange windows                      |
-| =n=, =C-n=, =SPC= | Move to next window                  |
-| =p=, =C-p=      | Move to previous window              |
-| =N=, =C-S-n=    | Swap places with the next window     |
-| =P=, =C-S-p=    | Swap places with the previous window |
-| =%=, ={=, =[=     | Decrease the size of the master area |
-| =^=, =}=, =]=     | Increase the size of the master area |
-| =d=, =C-d=      | Decrease number of windows in master |
-| =i=           | Increase number of windows in master |
-| =k=, =C-k=      | Delete window                        |
-| =RET=         | Cycle window to/from master area     |
-| =c=, =C-c=      | Clone current window                 |
-
-#+begin_src emacs-lisp
-  ;; (use-package edwina
-  ;;   :ensure t
-  ;;   :config
-  ;;   (setq display-buffer-base-action '(display-buffer-below-selected))
-  ;;   ;; (edwina-setup-dwm-keys)
-  ;;   (edwina-mode 1))
-#+end_src
-
 * Denote
 
 I am not really sure about the usage of this project. Let's just try this.
@@ -1396,5 +1369,17 @@ I am not really sure about the usage of this project. Let's just try this.
   (use-package eldoc
     :diminish eldoc-mode
     :init  (setq eldoc-idle-delay 0.1))
-#+end_sr
-c
+#+end_src
+
+* Daemon
+
+#+begin_src elisp
+  (defun handle-frame-functions (frame)
+    (setq doom-modeline-icon t)
+    (with-selected-frame frame
+      (ks/set-font-faces)))
+
+  (if (daemonp)
+      (add-hook 'after-make-frame-functions 'handle-frame-functions)
+    (ks/set-font-faces))
+#+end_src
