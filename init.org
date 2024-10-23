@@ -67,7 +67,7 @@
   (add-hook 'emacs-startup-hook #'ks/display-startup-time)
 #+end_src
 
-* Package System Setup
+* Package System
 
 #+begin_src emacs-lisp
   (require 'package)
@@ -103,7 +103,7 @@
         `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 #+end_src
 
-* Basic UI Configuration
+* Basic
 
 #+begin_src emacs-lisp
   (scroll-bar-mode -1)
@@ -112,19 +112,6 @@
   (set-fringe-mode 10)
   (menu-bar-mode -1)
   (column-number-mode)
-
-  ;; frame transparency
-  (setq ks/frame-transparency '(100 . 100))
-  (set-frame-parameter (selected-frame) 'alpha ks/frame-transparency)
-  (add-to-list 'default-frame-alist `(alpha . ,ks/frame-transparency))
-  (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
-  (add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-  ;; fonts
-  (defun ks/set-font-faces ()
-    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold))
 
   (setq-default locale-coding-system 'utf-8-unix
                 buffer-file-encoding-system 'utf-8-unix
@@ -218,7 +205,6 @@
     :config
     (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
     (global-set-key (kbd "C->") 'mc/mark-next-like-this)
-    (global-set-key (kbd "C-+") 'mc/mark-next-like-this)
     (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
     (global-set-key (kbd "C-M-<mouse-1>") 'mc/add-cursor-on-click))
 
@@ -259,6 +245,20 @@
     (newline-and-indent))
   (global-set-key (kbd "S-<return>") 'next-open-line)
 
+  (defun copy-to-eol ()
+    (interactive)
+    (kill-ring-save (point) (pos-eol)))
+
+  (global-set-key (kbd "C-c M-w") 'copy-to-eol)
+
+  (defun copy-region-or-line ()
+    (interactive)
+    (if (and (mark) (use-region-p))
+        (kill-ring-save (min (point) (mark)) (max (point) (mark)))
+      (kill-ring-save (pos-bol) (pos-eol))))
+
+  ;; (global-set-key (kbd "s-c") 'copy-region-or-line)
+
   (global-unset-key (kbd "S-<SPC>"))
   (setq default-input-method "korean-hangul")
   ;; (global-set-key (kbd "S-<SPC>") 'toggle-input-method)
@@ -273,11 +273,24 @@
   (put 'downcase-region 'disabled nil)
 #+end_src
 
-* UI Configuration
+* UI
 
 [[https://github.com/lewang/command-log-mode][Github Link for command-log-mode]]
 
 #+begin_src emacs-lisp
+  ;; frame transparency
+  (setq ks/frame-transparency '(100 . 100))
+  (set-frame-parameter (selected-frame) 'alpha ks/frame-transparency)
+  (add-to-list 'default-frame-alist `(alpha . ,ks/frame-transparency))
+  (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+  ;; fonts
+  (defun ks/set-font-faces ()
+    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
+    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold))
+
   (use-package kuronami-theme
     :ensure t
     :config
@@ -710,9 +723,9 @@ For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
            (for-python               `(:foreground "#5555FF")))
 
       (concat
-       (propertize " "    'face for-bars)
-       (propertize parent   'face for-parent)
-       (propertize name     'face for-dir)
+       (propertize "K " 'face for-bars)
+       (propertize parent 'face for-parent)
+       (propertize name 'face for-dir)
        (when branch
          (concat (propertize " ── "    'face for-bars)
                  (propertize branch   'face for-git)))
@@ -946,10 +959,8 @@ He's really amazing.
     (tab-bar-close-button-show nil)
     (tab-bar-auto-width nil)
     (tab-bar-format '(tab-bar-format-menu-bar
-                      ;;dw/exwm-workspace-icon
                       tab-bar-format-tabs-groups
                       tab-bar-separator
-                      ;;dw/tmr-mode-line
                       tab-bar-separator
                       tab-bar-format-align-right
                       tab-bar-format-global))
@@ -1307,7 +1318,7 @@ I am not really sure about the usage of this project. Let's just try this.
     :ensure t
     :init
     (setq js2-basic-indent 2
-          ;; js2-basic-offset 2
+          js2-basic-offset 2
           js2-auto-indent-p t
           ;; js2-cleanup-whitespace t
           js2-enter-indents-newline t
