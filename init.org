@@ -17,15 +17,15 @@
   (setenv "XDG_CONFIG_HOME" (concat (getenv "HOME") "/.config"))
   (setenv "PAGER" "cat")
 
-  (setq ks/default-font-size 110)
-  (setq ks/default-variable-font-size 110)
+  (setq k/default-font-size 110)
+  (setq k/default-variable-font-size 110)
 
   ;; macOS
   (if (string-equal "darwin" system-type)
       (progn (setq insert-directory-program "gls" dired-use-ls-dired t)
              (setq dired-listing-switches "-al --group-diretories-first")
-             (setq ks/default-font-size 140)
-             (setq ks/default-variable-font-size 140)))
+             (setq k/default-font-size 140)
+             (setq k/default-variable-font-size 140)))
 #+end_src
 
 * Tips
@@ -57,14 +57,14 @@
 #+begin_src emacs-lisp
   (setq gc-cons-threshold (* 50 1000 1000))
 
-  (defun ks/display-startup-time ()
+  (defun k/display-startup-time ()
     (message "Emacs loaded in %s with %d garbage collections."
              (format "%.2f seconds"
                      (float-time
                       (time-subtract after-init-time before-init-time)))
              gcs-done))
 
-  (add-hook 'emacs-startup-hook #'ks/display-startup-time)
+  (add-hook 'emacs-startup-hook #'k/display-startup-time)
 #+end_src
 
 * Package System
@@ -220,6 +220,11 @@
     ("M-h" . er/expand-region)
     ("M-H" . er/contract-region))
 
+  (use-package so-long
+    :ensure t
+    :config
+    (global-so-long-mode 1))
+
   (defun kill-back-to-indentation ()
     "Kill from point back to the first non-whitespace character on the line."
     (interactive)
@@ -248,7 +253,6 @@
   (defun copy-to-eol ()
     (interactive)
     (kill-ring-save (point) (pos-eol)))
-
   (global-set-key (kbd "C-c M-w") 'copy-to-eol)
 
   (defun copy-region-or-line ()
@@ -256,8 +260,30 @@
     (if (and (mark) (use-region-p))
         (kill-ring-save (min (point) (mark)) (max (point) (mark)))
       (kill-ring-save (pos-bol) (pos-eol))))
-
   ;; (global-set-key (kbd "s-c") 'copy-region-or-line)
+
+  (defun upcase-word-backwards ()
+    "Uppercase word backwards."
+    (interactive)
+    (backward-word)
+    (upcase-word 1)
+    (backward-word))
+  (global-set-key (kbd "M-U") 'upcase-word-backwards)
+
+  (defun downcase-word-backwards ()
+    "Lowercase word backwards."
+    (interactive)
+    (backward-word)
+    (downcase-word 1)
+    (backward-word))
+  (global-set-key (kbd "M-L") 'downcase-word-backwards)
+
+  (if (functionp 'er/mark-word)
+      (defun upcase-word-at-point ()
+        (interactive)
+        (er/mark-word)
+        (upcase-region (min (point) (mark))
+                       (max (point) (mark)))))
 
   (global-unset-key (kbd "S-<SPC>"))
   (setq default-input-method "korean-hangul")
@@ -279,22 +305,29 @@
 
 #+begin_src emacs-lisp
   ;; frame transparency
-  (setq ks/frame-transparency '(100 . 100))
-  (set-frame-parameter (selected-frame) 'alpha ks/frame-transparency)
-  (add-to-list 'default-frame-alist `(alpha . ,ks/frame-transparency))
+  (setq k/frame-transparency '(100 . 100))
+  (set-frame-parameter (selected-frame) 'alpha k/frame-transparency)
+  (add-to-list 'default-frame-alist `(alpha . ,k/frame-transparency))
   (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
   (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
   ;; fonts
-  (defun ks/set-font-faces ()
-    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height ks/default-font-size)
-    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height ks/default-variable-font-size :weight 'bold))
+  (defun k/set-font-faces ()
+    (interactive)
+    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height k/default-font-size)
+    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height k/default-font-size)
+    ;; (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height k/default-variable-font-size :weight 'bold))
+    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height k/default-variable-font-size))
 
-  (use-package kuronami-theme
+  ;; (use-package kuronami-theme
+  ;;   :ensure t
+  ;;   :config
+  ;;   (load-theme 'kuronami))
+
+  (use-package doom-themes
     :ensure t
     :config
-    (load-theme 'kuronami))
+    (load-theme 'doom-opera-light))
 
   (use-package command-log-mode
     :commands command-log-mode)
@@ -314,7 +347,7 @@
     ("k" text-scale-decrease "out")
     ("f" nil "finished" :exit t))
 
-  ;; (ks/leader-keys
+  ;; (k/leader-keys
   ;;  "ts" '(hydra-text-scale/body :which-key "scale text"))
 
   (use-package rainbow-mode
@@ -357,8 +390,6 @@
 #+end_src
 
 * Completion
-
-TODO: add corfu for lsp, abbrev and maybe yasnippet?
 
 #+begin_src emacs-lisp
   (use-package vertico
@@ -420,7 +451,36 @@ TODO: add corfu for lsp, abbrev and maybe yasnippet?
     ("M-s k" . consult-keep-lines)
     ("M-s u" . consult-focus-lines))
 
+  (use-package corfu
+    ;; Optional customizations
+    :custom
+    (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+    (corfu-auto t)                 ;; Enable auto completion
+    (corfu-auto-delay 1)
+    (corfu-auto-prefix 3)
+    ;; (corfu-separator ?\s)          ;; Orderless field separator
+    ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
+    ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+    ;; (corfu-preview-current nil)    ;; Disable current candidate preview
+    ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
+    ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+    ;; (corfu-scroll-margin 5)        ;; Use scroll margin
+
+    ;; Enable Corfu only for certain modes. See also `global-corfu-modes'.
+    :hook ((prog-mode . corfu-mode)
+           (eshell-mode . corfu-mode))
+    :config
+    (keymap-set corfu-map "RET" #'corfu-send))
+
+  (use-package yasnippet
+    :hook
+    (prog-mode . yas-minor-mode))
+
+  (use-package yasnippet-snippets)
+
+  ;; 이건 어디다 둬야 함?
   (global-set-key (kbd "C-x C-b") 'ibuffer)
+
 #+end_src
 
 * Org Mode
@@ -443,7 +503,7 @@ TODO: add corfu for lsp, abbrev and maybe yasnippet?
   ;; (set-face-attribute 'line-number nil :inherit 'regular)
   ;; (set-face-attribute 'line-number-current-line nil :inherit 'bold)
 
-  (defun ks/org-mode-setup ()
+  (defun k/org-mode-setup ()
     (org-indent-mode)
     (display-line-numbers-mode 0)
     ;; (variable-pitch-mode 1)
@@ -454,9 +514,9 @@ TODO: add corfu for lsp, abbrev and maybe yasnippet?
   (use-package org
     :pin org
     :commands (org-capture org-agenda)
-    :hook (org-mode . ks/org-mode-setup)
+    :hook (org-mode . k/org-mode-setup)
     :config
-    (setq org-ellipsis "..."
+    (setq org-ellipsis " ... "
           org-agenda-start-with-log-mode t
           org-log-done 'time
           org-log-into-drawer t
@@ -469,34 +529,28 @@ TODO: add corfu for lsp, abbrev and maybe yasnippet?
           org-export-kill-product-buffer-when-displayed t
           org-tags-column 80))
 
-  ;; bullets
-  ;; (use-package org-bullets
-  ;;   :hook (org-mode . org-bullets-mode)
-  ;;   :custom
-  ;;   (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
-
   ;; visual fill column
-  (defun ks/org-mode-visual-fill ()
+  (defun k/org-mode-visual-fill ()
     (setq visual-fill-column-width 100
-          visual-fill-column-center-text t)
+          visual-fill-column-center-text nil)
     (visual-fill-column-mode 1))
 
   (use-package visual-fill-column
     :hook
-    (org-mode . ks/org-mode-visual-fill))
+    (org-mode . k/org-mode-visual-fill))
 
   ;; structure templates
   ;; Lots of stuff from http://doc.norang.ca/org-mode.html
   (with-eval-after-load 'org
     (require 'org-tempo)
-    ;; (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
-    ;; (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-    ;; (add-to-list 'org-structure-template-alist '("py" . "src python"))
-    ;; (add-to-list 'org-structure-template-alist '("js" . "src javascript"))
-    ;; (add-to-list 'org-structure-template-alist '("ts" . "src typescript"))
-    ;; (add-to-list 'org-structure-template-alist '("java" . "src java"))
-    ;; (add-to-list 'org-structure-template-alist '("c" . "src c"))
-    ;; (add-to-list 'org-structure-template-alist '("sql" . "src sql"))
+    (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+    (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+    (add-to-list 'org-structure-template-alist '("py" . "src python"))
+    (add-to-list 'org-structure-template-alist '("js" . "src javascript"))
+    (add-to-list 'org-structure-template-alist '("ts" . "src typescript"))
+    (add-to-list 'org-structure-template-alist '("java" . "src java"))
+    (add-to-list 'org-structure-template-alist '("sql" . "src sql"))
+    (add-to-list 'org-structure-template-alist '("rust" . "src rust"))
 
     (org-babel-do-load-languages
      'org-babel-load-languages
@@ -518,14 +572,11 @@ TODO: add corfu for lsp, abbrev and maybe yasnippet?
 * Tangle Configuration Files
 
 #+begin_src emacs-lisp
-  (defun ks/org-babel-tangle-config ()
-    (when (string-equal (file-name-directory (buffer-file-name))
-                        (expand-file-name user-emacs-directory))
-      ;; dynamic scoping to the rescue
+  (defun k/org-babel-tangle-config ()
+    (when (string-equal (file-name-nondirectory (buffer-file-name)) "init.org")
       (let ((org-confirm-babel-evaluate nil))
         (org-babel-tangle))))
-
-  (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'ks/org-babel-tangle-config)))
+  (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'k/org-babel-tangle-config)))
 #+end_src
 
 * Eglot
@@ -621,8 +672,6 @@ Don't use any terminal on Windows. That sucks.
 #+end_src
 
 * Eshell
-
-Can I trust you...?
 
 [[https://www.gnu.org/software/emacs/manual/html_mono/eshell.html#Contributors-to-Eshell][Eshell]] is Emacs' own shell implementation written in Emacs Lisp.  It provides you with a cross-platform implementation (even on Windows!) of the common GNU utilities you would find on Linux and macOS (=ls=, =rm=, =mv=, =grep=, etc).  It also allows you to call Emacs Lisp functions directly from the shell and you can even set up aliases (like aliasing =vim= to =find-file=).  Eshell is also an Emacs Lisp REPL which allows you to evaluate full expressions at the shell.
 
@@ -723,7 +772,7 @@ For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
            (for-python               `(:foreground "#5555FF")))
 
       (concat
-       (propertize "K " 'face for-bars)
+       ;; (propertize "K " 'face for-bars)
        (propertize parent 'face for-parent)
        (propertize name 'face for-dir)
        (when branch
@@ -737,17 +786,12 @@ For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
        ;; (propertize " └→" 'face (if (= (user-uid) 0) `(:weight ultra-bold :foreground "red") `(:weight ultra-bold)))
        (propertize " "    'face `(:weight bold)))))
 
-  (defun ks/configure-eshell ()
+  (defun k/configure-eshell ()
     ;; Save command history when commands are entered
     (add-hook 'eshell-pre-command-hook 'eshell-save-some-history)
 
     ;; Truncate buffer for performance
     (add-to-list 'eshell-output-filter-functions 'eshell-truncate-buffer)
-
-    ;; Bind some useful keys for evil-mode
-    ;; (evil-define-key '(normal insert visual) eshell-mode-map (kbd "C-r") 'counsel-esh-history)
-    ;; (evil-define-key '(normal insert visual) eshell-mode-map (kbd "<home>") 'eshell-bol)
-    ;; (evil-normalize-keymaps)
 
     ;; Prompt settings
     (setq-default eshell-prompt-function #'eshell/eshell-local-prompt-function)
@@ -783,7 +827,7 @@ For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
     :after eshell)
 
   (use-package eshell
-    :hook (eshell-first-time-mode . ks/configure-eshell))
+    :hook (eshell-first-time-mode . k/configure-eshell))
 
   (defun eshell/clear ()
     "Clear the eshell buffer."
@@ -812,6 +856,7 @@ For more thoughts on Eshell, check out these articles by Pierre Neidhardt:
       (insert (concat "ls"))
       (eshell-send-input)))
 #+end_src
+
 * Dired
 
 *Navigation*
@@ -967,73 +1012,43 @@ He's really amazing.
     ;; Like winner-mode for tabs
     (tab-bar-history-mode 1)
     (tab-bar-mode 1))
+
+  (defun k/sync-tab-bar-to-theme ()
+    "Synchronize tab-bar faces with the current theme."
+    (interactive)
+    (let ((default-bg (face-background 'default))
+           (default-fg (face-foreground 'default))
+           (inactive-fg (face-foreground 'mode-line-inactive)))
+      (custom-set-faces
+        `(tab-bar ((t (:inherit default :background ,default-bg :foreground ,default-fg))))
+        `(tab-bar-tab ((t (:inherit default :background ,default-fg :foreground ,default-bg))))
+        `(tab-bar-tab-inactive ((t (:inherit default :background ,default-bg :foreground ,inactive-fg))))))
+    (setq tab-bar-new-button-show nil)
+    (setq tab-bar-menu-bar-button nil))
+  (k/sync-tab-bar-to-theme)
 #+end_src
 
 * Window configuration
 
 #+begin_src emacs-lisp
-  ;; (use-package winner
-  ;;   :ensure t
-  ;;   :config
-  ;;   (winner-mode t))
+  (use-package winner
+    :ensure t
+    :config
+    (winner-mode t))
 
-  ;; (defun split-window-func-with-other-buffer (split-function)
-  ;;   (lambda (&optional arg)
-  ;;     "Split this window and switch to the new window unless ARG is provided."
-  ;;     (interactive "P")
-  ;;     (funcall split-function)
-  ;;     (let ((target-window (next-window)))
-  ;;       (set-window-buffer target-window (other-buffer))
-  ;;       (unless arg
-  ;;         (select-window target-window)))))
-
-  ;; (global-set-key (kbd "C-x 2") (split-window-func-with-other-buffer 'split-window-vertically))
-  ;; (global-set-key (kbd "C-x 3") (split-window-func-with-other-buffer 'split-window-horizontally))
-
-  ;; (defun sanityinc/toggle-delete-other-windows ()
-  ;;   "Delete other windows in frame if any, or restore previous window config."
-  ;;   (interactive)
-  ;;   (if (and winner-mode
-  ;;            (equal (selected-window) (next-window)))
-  ;;       (winner-undo)
-  ;;     (delete-other-windows)))
-
-  ;; (global-set-key (kbd "C-x 1") 'sanityinc/toggle-delete-other-windows)
-
-  ;; (defun split-window-horizontally-instead ()
-  ;;   "Kill any other windows and re-split such that the current window is on the top half of the frame."
-  ;;   (interactive)
-  ;;   (let ((other-buffer (and (next-window) (window-buffer (next-window)))))
-  ;;     (delete-other-windows)
-  ;;     (split-window-horizontally)
-  ;;     (when other-buffer
-  ;;       (set-window-buffer (next-window) other-buffer))))
-
-  ;; (defun split-window-vertically-instead ()
-  ;;   "Kill any other windows and re-split such that the current window is on the left half of the frame."
-  ;;   (interactive)
-  ;;   (let ((other-buffer (and (next-window) (window-buffer (next-window)))))
-  ;;     (delete-other-windows)
-  ;;     (split-window-vertically)
-  ;;     (when other-buffer
-  ;;       (set-window-buffer (next-window) other-buffer))))
-
-  ;; (global-set-key (kbd "C-x |") 'split-window-horizontally-instead)
-  ;; (global-set-key (kbd "C-x _") 'split-window-vertically-instead)
-
-  ;; (defun sanityinc/split-window()
-  ;;   "Split the window to see the most recent buffer in the other window.
-  ;; Call a second time to restore the original window configuration."
-  ;;   (interactive)
-  ;;   (if (eq last-command 'sanityinc/split-window)
-  ;;       (progn
-  ;;         (jump-to-register :sanityinc/split-window)
-  ;;         (setq this-command 'sanityinc/unsplit-window))
-  ;;     (window-configuration-to-register :sanityinc/split-window)
-  ;;     (switch-to-buffer-other-window nil)))
-
-  ;; (global-set-key (kbd "<f7>") 'sanityinc/split-window)
+  (defun k/split-window()
+    "Split the window to see the most recent buffer in the other window.
+  Call a second time to restore the original window configuration."
+    (interactive)
+    (if (eq last-command 'k/split-window)
+        (progn
+          (jump-to-register :k/split-window)
+          (setq this-command 'k/unsplit-window))
+      (window-configuration-to-register :k/split-window)
+      (switch-to-buffer-other-window nil)))
+  (global-set-key (kbd "<f5>") 'k/split-window)
 #+end_src
+
 * Denote
 
 I am not really sure about the usage of this project. Let's just try this.
@@ -1154,7 +1169,7 @@ I am not really sure about the usage of this project. Let's just try this.
     :ensure t
     :config
     (setq nov-text-width t)
-    (setq visual-fill-column-center-text t)
+    (setq visual-fill-column-center-text nil)
     (add-hook 'nov-mode-hook 'visual-line-mode)
     (add-hook 'nov-mode-hook 'visual-fill-column-mode)
     (add-hook 'nov-mode-hook 'nov-font-setup)
@@ -1173,7 +1188,6 @@ I am not really sure about the usage of this project. Let's just try this.
 * Emacs Lisp
 
 #+begin_src emacs-lisp
-  ;; elisp
   (setq-default initial-scratch-message
                 (concat ";; Happy hacking, " user-login-name "!!\n\n"))
 
@@ -1202,7 +1216,7 @@ I am not really sure about the usage of this project. Let's just try this.
     :init
     (add-hook 'emacs-lisp-mode-hook (lambda () (eros-mode 1))))
 
-  (defun ks/headerise-elisp ()
+  (defun k/headerise-elisp ()
     "Add minimal header and footer to an elisp buffer in order to placate flycheck."
     (interactive)
     (let ((fname (if (buffer-file-name)
@@ -1216,7 +1230,7 @@ I am not really sure about the usage of this project. Let's just try this.
         (goto-char (point-max))
         (insert ";;; " fname " ends here\n"))))
 
-  (defun ks/eval-last-sexp-or-region (prefix)
+  (defun k/eval-last-sexp-or-region (prefix)
     "Eval region from BEG to END if active, otherwise the last sexp."
     (interactive "P")
     (if (and (mark) (use-region-p))
@@ -1225,7 +1239,7 @@ I am not really sure about the usage of this project. Let's just try this.
 
   (global-set-key [remap eval-expression] 'pp-eval-expression)
 
-  (defun ks/load-this-file ()
+  (defun k/load-this-file ()
     "Load the current file or buffer.
   The current directory is temporarily added to `load-path'.  When
   there is no current file, eval the current buffer."
@@ -1240,17 +1254,12 @@ I am not really sure about the usage of this project. Let's just try this.
         (eval-buffer)
         (message "Evaluated %s" (current-buffer)))))
 
-  ;; (with-eval-after-load 'lisp-mode
-  ;;   (define-key emacs-lisp-mode-map (kbd "C-c C-l") 'ks/load-this-file)
-  ;;   (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
-  ;;   (define-key emacs-lisp-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region))
-
-  (define-key emacs-lisp-mode-map (kbd "C-c C-l") 'ks/load-this-file)
-  (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
-  (define-key emacs-lisp-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region)
-  (define-key lisp-interaction-mode-map (kbd "C-c C-l") 'ks/load-this-file)
-  (define-key lisp-interaction-mode-map (kbd "C-x C-e") 'ks/eval-last-sexp-or-region)
-  (define-key lisp-interaction-mode-map (kbd "C-<return>") 'ks/eval-last-sexp-or-region)
+  (define-key emacs-lisp-mode-map (kbd "C-c C-l") 'k/load-this-file)
+  (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'k/eval-last-sexp-or-region)
+  (define-key emacs-lisp-mode-map (kbd "C-<return>") 'k/eval-last-sexp-or-region)
+  (define-key lisp-interaction-mode-map (kbd "C-c C-l") 'k/load-this-file)
+  (define-key lisp-interaction-mode-map (kbd "C-x C-e") 'k/eval-last-sexp-or-region)
+  (define-key lisp-interaction-mode-map (kbd "C-<return>") 'k/eval-last-sexp-or-region)
 #+end_src
 
 * Web Mode
@@ -1306,19 +1315,22 @@ I am not really sure about the usage of this project. Let's just try this.
 #+end_src
 
 * CSS Mode
+
 #+begin_src emacs-lisp
   (use-package css-mode
     :ensure t
     :config
     (setq-default css-indent-offset 2))
 #+end_src
+
 * JS Mode
 #+begin_src emacs-lisp
   (use-package js2-mode
     :ensure t
     :init
     (setq js2-basic-indent 2
-          js2-basic-offset 2
+          ;; js2-basic-offset 2
+          js-indent-level 2
           js2-auto-indent-p t
           ;; js2-cleanup-whitespace t
           js2-enter-indents-newline t
@@ -1388,9 +1400,9 @@ I am not really sure about the usage of this project. Let's just try this.
   (defun handle-frame-functions (frame)
     (setq doom-modeline-icon t)
     (with-selected-frame frame
-      (ks/set-font-faces)))
+      (k/set-font-faces)))
 
   (if (daemonp)
       (add-hook 'after-make-frame-functions 'handle-frame-functions)
-    (ks/set-font-faces))
+    (k/set-font-faces))
 #+end_src
