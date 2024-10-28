@@ -147,7 +147,7 @@
                 case-fold-search t
                 column-number-mode t
                 indicate-buffer-boundaries 'left
-                display-fill-column-indicator-character ?┊
+                ;; display-fill-column-indicator-character ?┊
                 ediff-split-window-function 'split-window-horizontally
                 ediff-window-setup-function 'ediff-setup-windows-plain
                 indent-tabs-mode nil
@@ -172,7 +172,7 @@
                   conf-mode-hook))
     (add-hook mode (lambda ()
                      (display-line-numbers-mode t)
-                     (display-fill-column-indicator-mode t))))
+                     (display-fill-column-indicator-mode -1))))
 #+end_src
 
 * Editing
@@ -308,8 +308,8 @@
   (setq k/frame-transparency '(100 . 100))
   (set-frame-parameter (selected-frame) 'alpha k/frame-transparency)
   (add-to-list 'default-frame-alist `(alpha . ,k/frame-transparency))
-  (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
-  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+  ;; (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+  ;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
   ;; fonts
   (defun k/set-font-faces ()
@@ -373,7 +373,7 @@
 
   (use-package beacon
     :config
-    (beacon-mode 1))
+    (beacon-mode nil))
 #+end_src
 
 * Which key
@@ -567,6 +567,15 @@
         (shell . t)
         (sql . t)
         (sqlite . t)))))
+#+end_src
+
+* Markdown Mode
+
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :ensure t
+    :mode ("README\\.md\\'" . gfm-mode)
+    :init (setq markdown-command "multimarkdown"))
 #+end_src
 
 * Tangle Configuration Files
