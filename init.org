@@ -253,7 +253,7 @@
   (defun copy-to-eol ()
     (interactive)
     (kill-ring-save (point) (pos-eol)))
-  (global-set-key (kbd "C-c M-w") 'copy-to-eol)
+  (global-set-key (kbd "C-c e") 'copy-to-eol)
 
   (defun copy-region-or-line ()
     (interactive)
@@ -290,6 +290,8 @@
   ;; (global-set-key (kbd "S-<SPC>") 'toggle-input-method)
   ;; use C-\ instead
 
+  (global-set-key (kbd "<escape>") 'keyboard-quit)
+
   ;; Don't disable narrowing commands
   (put 'narrow-to-region 'disabled nil)
   (put 'narrow-to-page 'disabled nil)
@@ -297,6 +299,9 @@
   ;; Don't disable case-change functions
   (put 'upcase-region 'disabled nil)
   (put 'downcase-region 'disabled nil)
+
+  (use-package sudo-edit
+    :ensure t)
 #+end_src
 
 * UI
