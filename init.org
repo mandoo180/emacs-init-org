@@ -319,20 +319,14 @@
   ;; fonts
   (defun k/set-font-faces ()
     (interactive)
-    (set-face-attribute 'default nil :font "Iosevka Nerd Font" :height k/default-font-size)
-    (set-face-attribute 'fixed-pitch nil :font "Iosevka Nerd Font" :height k/default-font-size)
-    ;; (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height k/default-variable-font-size :weight 'bold))
-    (set-face-attribute 'variable-pitch nil :font "Iosevka Nerd Font" :height k/default-variable-font-size))
-
-  ;; (use-package kuronami-theme
-  ;;   :ensure t
-  ;;   :config
-  ;;   (load-theme 'kuronami))
+    (set-face-attribute 'default nil :font "JetBrainsMono Nerd Font" :weight 'thin :height k/default-font-size)
+    (set-face-attribute 'fixed-pitch nil :font "JetBrainsMono Nerd Font" :weight 'light :height k/default-font-size)
+    (set-face-attribute 'variable-pitch nil :font "JetBrainsMono Nerd Font" :weight 'light :height k/default-variable-font-size))
 
   (use-package doom-themes
     :ensure t
     :config
-    (load-theme 'doom-opera-light))
+    (load-theme 'doom-one))
 
   (use-package command-log-mode
     :commands command-log-mode)
@@ -1419,4 +1413,53 @@ I am not really sure about the usage of this project. Let's just try this.
   (if (daemonp)
       (add-hook 'after-make-frame-functions 'handle-frame-functions)
     (k/set-font-faces))
+#+end_src
+
+* Evil
+
+experimental purpose ... should add more
+
+#+begin_src elisp
+  (use-package evil
+    :ensure t
+    :config
+    (evil-global-set-key 'insert (kbd "C-f") 'forward-char)
+    (evil-global-set-key 'insert (kbd "C-b") 'backward-char)
+    (evil-global-set-key 'insert (kbd "C-n") 'forward-line)
+    (evil-global-set-key 'insert (kbd "C-p") 'previous-line)
+    (evil-global-set-key 'insert (kbd "C-d") 'delete-char)
+    (evil-global-set-key 'insert (kbd "C-k") 'kill-line)
+    (evil-global-set-key 'insert (kbd "C-e") 'move-end-of-line)
+    (evil-global-set-key 'insert (kbd "C-a") 'move-beginning-of-line)
+
+    (evil-global-set-key 'insert (kbd "M-m") 'back-to-indentation)
+    (evil-global-set-key 'insert (kbd "M-f") 'forward-word)
+    (evil-global-set-key 'insert (kbd "M-b") 'backward-word)
+    (evil-global-set-key 'insert (kbd "M-<DEL>") 'backward-kill-word)
+    (evil-global-set-key 'insert (kbd "M-d") 'kill-word)
+
+    (evil-global-set-key 'normal (kbd "<SPC><SPC>") 'execute-extended-command)
+    (evil-global-set-key 'normal (kbd "<SPC>ff") 'find-file)
+    (evil-global-set-key 'normal (kbd "<SPC>fo") 'find-file-other-window)
+    (evil-global-set-key 'normal (kbd "<SPC>ft") 'find-file-other-tab)
+    (evil-global-set-key 'normal (kbd "<SPC>fr") 'consult-recent-file)
+
+    (evil-global-set-key 'normal (kbd "<SPC>bb") 'consult-buffer)
+    (evil-global-set-key 'normal (kbd "<SPC>bo") 'consult-buffer-other-window)
+    (evil-global-set-key 'normal (kbd "<SPC>bt") 'consult-buffer-other-tab)
+    (evil-global-set-key 'normal (kbd "<SPC>bk") 'kill-current-buffer)
+    (evil-global-set-key 'normal (kbd "<SPC>bn") 'next-buffer)
+    (evil-global-set-key 'normal (kbd "<SPC>bp") 'previous-buffer)
+
+    (evil-global-set-key 'normal (kbd "<SPC>gg") 'consult-ripgrep)
+    (evil-global-set-key 'normal (kbd "<SPC>gi") 'consult-imenu)
+
+    (add-hook 'prog-mode-hook (lambda ()
+                                (evil-local-mode 1))))
+
+  (use-package key-chord
+    :config
+    (setq key-chord-two-keys-delay 0.5)
+    (key-chord-define evil-insert-state-map "jk" 'evil-normal-state)
+    (key-chord-mode 1))
 #+end_src
